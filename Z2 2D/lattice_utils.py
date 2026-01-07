@@ -75,34 +75,30 @@ def vector_2_direction_index(vec):
         else:
             Warning("vec must be a standard unit vector, returning nan")
             return np.nan
-            
+    raise RuntimeError(
+        "Direction must not be inferred from vectors when using PBC"
+    )
 
 
 class link:
-    sites = None # a directional list of size 2
-    def __init__(self, *sites):
-        check_dimension(*sites)
-        self.sites = sites
-        self.sites[0].out_links.append(self)
-        self.sites[1].in_links.append(self)
-    def __repr__(self):
-        return f"<link : {self.sites}>"
-    
-    def vector(self):
-        return self.sites[1].coordinates - self.sites[0].coordinates
-    
-    def dimension(self):
-        return self.sites[0].dimension()
-        
+    def __init__(self, site_from, site_to, direction):
+        check_dimension(site_from, site_to)
+        self.sites = (site_from, site_to)
+        self._direction = direction
+
+        site_from.out_links.append(self)
+        site_to.in_links.append(self)
+
     def direction(self):
-        ## works only for standard square lattice unit directions
-        try:
-            return vector_2_direction_index(self.vector())
-        except Warning:
-            Warning("direction index is only defined for standard unit vectors ( positive directions of a square lattice)")
-                        
+        return self._direction
+
+    def vector(self):
+        # purely geometric, may be non-unit for PBC
+        return self.sites[1].coordinates - self.sites[0].coordinates
+
     def LGT_notation(self):
-        return LGT_notation(self.sites[0].coordinates, self.direction())
+        return LGT_notation(self.sites[0].coordinates, self._direction)
+
     
  
 class lattice:
@@ -200,7 +196,7 @@ class square_lattice(lattice):
     # boundary_links = None
     
     
-    def __init__(self,dim, size):
+    def __init__(self,dim, size, pbc=False):
         if not isinstance(size, Iterable):
             size = [size for i in range(dim)]
         
@@ -213,15 +209,21 @@ class square_lattice(lattice):
             
         self.links = []
         unit_vecs = np.eye(dim)
-        
+
         for s in self.sites:
-            for i in range(dim):
+            for mu in range(dim):
+                step = unit_vecs[mu]
+                target_coords = s.coordinates + step
+
+                if pbc:
+                    target_coords = target_coords % self.size
+
                 try:
-                    next_site = self.get_site(s.coordinates+unit_vecs[i])
-                    self.links.append(link(s, next_site))
+                    next_site = self.get_site(target_coords)
+                    self.links.append(link(s, next_site, direction=mu))
                 except ValueError:
-                    # do skip the cases where next site does not exist
                     pass
+
     def link_exists(self, *link_args):
 
        try:
@@ -244,5 +246,6 @@ class square_lattice(lattice):
     
             
 if __name__ =="__main__":
-    lat2 = square_lattice(2,10)
+    lat2 = square_lattice(2,[3,4])
     lat2.plot()
+    plt.show()

@@ -18,7 +18,7 @@ J = 0
 m = 0
 lam_B = 1
 lam_E = 0
-lat =square_lattice(2, [3,2])
+lat =square_lattice(2, [3,2], pbc = True)
 # l0 = lat.links[0]
 # l1 = lat.links[1]
 # lat.plot()
@@ -30,11 +30,11 @@ rangey = range(Ny)
 descriptor = f"${lat.size[0]}\\times{lat.size[1]}$ sites, $J={J}$, $m={m}$, $\\lambda_B={lam_B}$, $\\lambda_E={lam_E}$"
 
 # add l and u boundary links:
-for i in range(1,Nx-1):
-    lat.sites.append(site([i,-1]))
-    lat.links.append(link(lat.get_site([i,-1]),lat.get_site([i,0])))
-    lat.sites.append(site([i,Ny]))
-    lat.links.append(link(lat.get_site([i,Ny-1]),lat.get_site([i,Ny])))
+# for i in range(1,Nx-1):
+#     lat.sites.append(site([i,-1]))
+#     lat.links.append(link(lat.get_site([i,-1]),lat.get_site([i,0])))
+#     lat.sites.append(site([i,Ny]))
+#     lat.links.append(link(lat.get_site([i,Ny-1]),lat.get_site([i,Ny])))
 n = lat.num_links() # number of qubits
 lat.plot(); plt.show()
 #%%
