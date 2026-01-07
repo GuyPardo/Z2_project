@@ -166,21 +166,59 @@ class lattice:
     
     def dimension(self):
         return self.sites[0].dimension()
-    
-    def plot(self):
-        sites_coordinates = []
-        for i in range(self.dimension()):
-            sites_coordinates.append([site.coordinates[i] for site in self.sites])    
-        
-        sites_coordinates = np.array(sites_coordinates)
-        links_coordinates = [ [tuple(link.sites[0].coordinates),tuple(link.sites[1].coordinates)] for link in self.links]
-        #TODO: 3D
-        if self.dimension()==2:
-            xx,yy =     np.meshgrid(sites_coordinates[0],sites_coordinates[1])
-            plt.scatter(xx,yy)
-            
-        plt.gca().add_collection(mc.LineCollection(links_coordinates, linewidths=2))
-    
+
+    def plot(self, show_pbc=True):
+        dim = self.dimension()
+        size = np.array(self.size)
+
+        # plot sites
+        coords = np.array([s.coordinates for s in self.sites])
+        if dim == 2:
+            plt.scatter(coords[:, 0], coords[:, 1], zorder=3)
+
+        segments = []
+
+        for l in self.links:
+            r0 = l.sites[0].coordinates.astype(float)
+            r1 = l.sites[1].coordinates.astype(float)
+            d = r1 - r0
+
+            wrapped = False
+            wrap_dir = None
+
+            # detect wrapping
+            for mu in range(dim):
+                if abs(d[mu]) > 1:
+                    wrapped = True
+                    wrap_dir = mu
+                    break
+
+            if not wrapped or not show_pbc:
+                segments.append([tuple(r0), tuple(r1)])
+            else:
+                # split wrapped link
+                mu = wrap_dir
+                sign = np.sign(d[mu])
+
+                # first segment: r0 → boundary
+                r_mid1 = r0.copy()
+                r_mid1[mu] = size[mu] - 0.5 if sign > 0 else -0.5
+
+                # second segment: opposite boundary → r1
+                r_mid2 = r1.copy()
+                r_mid2[mu] = -0.5 if sign > 0 else size[mu] - 0.5
+
+                segments.append([tuple(r0), tuple(r_mid1)])
+                segments.append([tuple(r_mid2), tuple(r1)])
+
+        lc = mc.LineCollection(segments, linewidths=2)
+        plt.gca().add_collection(lc)
+
+        plt.gca().set_aspect('equal')
+        plt.xlim(-.5, size[0]-.5)
+        plt.ylim(-.5, size[1]-.5)
+        plt.grid(True)
+
     def num_links(self):
         return len(self.links)
     
@@ -246,6 +284,6 @@ class square_lattice(lattice):
     
             
 if __name__ =="__main__":
-    lat2 = square_lattice(2,[3,4])
+    lat2 = square_lattice(2,[3,4], pbc=False)
     lat2.plot()
     plt.show()
